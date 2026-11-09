@@ -1,0 +1,13 @@
+{
+  "name": "rentofluencer",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/web",
+    "packages/shared-types",
+    "packages/shared-validation",
+    "packages/shared-utils",
+    "prisma",
+    "infrastructure"
+  ]
+}

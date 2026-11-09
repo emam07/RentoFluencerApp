@@ -1,0 +1,160 @@
+﻿generator client {
+  provider = "postgresql"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Core entities per CLAUDE.md Â§11
+
+model User {
+  id          String   @id @default(uuid())
+  name        String?
+  email       String   @unique
+  password    String
+  role        String   @default("RENTER")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile     Profile?   @relation(fields: [profileId], references: [id])
+  profileId   String?   @unique
+
+  // Owned bookings and transactions - foreign keys reference userId/profileId
+  bookings    Booking[]   @relation(rname: "UserBookings")
+  transactions Transaction[]
+
+  // Bookings where this user is the renter
+  rentedBookings Booking[]   @relation("UserBookings")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  bio       String?
+  avatar    String?
+  phone     String?
+
+  cityId    String?   @unique
+
+  userId    String   @unique
+
+  // Inverse: one profile belongs to one user
+  user      User     @relation(fields: [userId], references: [id])
+
+  // Profile has one city
+  city      City?    @relation(fields: [cityId], references: [id])
+}
+
+model City {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+
+  profiles    Profile[]
+}
+
+model Kit {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  dailyPrice  Int       // stored in paise per CLAUDE.md Â§8
+  category    String    // e.g., "Reels", "Vlog", "Portrait", "Podcast"
+  images      String[]  // URLs to equipment images
+
+  cityId      String
+
+  equipment   Equipment[]
+  listings    Listing[]
+
+  // Kit belongs to a city
+  city      City     @relation(fields: [cityId], references: [id])
+}
+
+model Equipment {
+  id          String   @id @default(uuid())
+  kitId       String?
+
+  // Equipment belongs to a kit (optional)
+  kit       Kit?     @relation(fields: [kitId], references: [id])
+  listings    Listing[]
+}
+
+model Listing {
+  id          String   @id @default(uuid())
+
+  providerId  String
+
+  kitId       String
+
+  availability Boolean   @default(true)
+  rentedFrom   DateTime?
+  rentedUntil  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  bookings    Booking[]   @relation(rname: "UserBookings")
+  kit     Kit?       @relation(fields: [kitId], references: [id])
+  provider    Provider   @relation(fields: [providerId], references: [id])
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+
+  renterId    String
+
+  listingId   String
+
+  status      String   @default("PENDING") // PENDING, CONFIRMED, ACTIVE, COMPLETED
+  totalPrice  Int       // in paise per CLAUDE.md Â§8
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user      User       @relation(fields: [renterId], references: [id], onDelete: Cascade)
+  listing   Listing    @relation(fields: [listingId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+
+  bookingId   String
+
+  providerId  String
+
+  amount      Int       // in paise per CLAUDE.md Â§8
+  status      String   // "PENDING", "PAID", "REFUNDED", "FAILED"
+  paymentId   String?  // Razorpay payment link ID
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  booking Booking   @relation(fields: [bookingId], references: [id])
+  Provider   Provider   @relation(fields: [providerId], references: [id])
+}
+
+model ProviderPayout {
+  id          String   @id @default(uuid())
+
+  providerId  String
+
+  amount      Int      // in paise
+  status      String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  razorpayId  String?  // Razorpay payout ID
+
+  createdAt   DateTime @default(now())
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String   // associated with a user
+  hash        String   // SHA-256 hash of the refresh token (never plaintext)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime? // null = active, set = revoked
+
+  // One token per user per session; multiple active tokens allowed
+  @@ unique([hash]) // hash is unique across all tokens
+}

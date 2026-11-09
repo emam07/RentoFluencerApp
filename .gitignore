@@ -1,0 +1,36 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+.pnpm-store/
+
+# Local environment files (Secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Next.js / Build outputs
+.next/
+dist/
+build/
+out/
+.turbo/
+
+# Prisma
+/prisma/migrations/
+
+# Docker
+.docker/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
